@@ -1,0 +1,39 @@
+.root { display: flex; flex-direction: column; gap: 16px; }
+.empty { color: #4a5568; text-align: center; padding: 40px 0; font-size: 14px; }
+
+.summary { display: flex; gap: 8px; }
+.stat { flex: 1; background: #1a1f2e; border-radius: 10px; padding: 12px; text-align: center; }
+.statVal { font-size: 24px; font-weight: 700; color: #f6c90e; }
+.statLbl { font-size: 11px; color: #718096; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.penetrationBar { height: 6px; background: #2d3748; border-radius: 3px; overflow: hidden; }
+.penetrationFill { height: 100%; background: #f6c90e; border-radius: 3px; transition: width 0.4s ease; }
+
+.rankGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.rankCell {
+  background: #1a1f2e; border-radius: 6px; padding: 6px 4px;
+  text-align: center; border: 1px solid #2d3748;
+}
+.rankCell.depleted { border-color: #fc8181; }
+.rankName { font-size: 11px; color: #718096; font-weight: 600; }
+.rankLeft { font-size: 14px; font-weight: 700; color: #e2e8f0; }
+.rankOf { font-size: 9px; color: #4a5568; }
+
+.history { display: flex; flex-direction: column; gap: 4px; }
+.title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096; margin-bottom: 4px; }
+.handRow {
+  display: flex; align-items: center; gap: 8px;
+  background: #1a1f2e; border-radius: 8px; padding: 8px 10px;
+  font-size: 13px;
+}
+.handId { color: #4a5568; width: 28px; }
+.handOutcome { font-weight: 700; width: 60px; }
+.handOutcome.banker { color: #63b3ed; }
+.handOutcome.player { color: #fc8181; }
+.handOutcome.tie    { color: #68d391; }
+.handScore { color: #a0aec0; margin-left: auto; }
+.natural { font-size: 10px; background: #f6c90e; color: #1a1f2e; border-radius: 4px; padding: 1px 5px; font-weight: 700; }

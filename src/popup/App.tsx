@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import type { AnalysisResult, Hand } from "../types";
-import HandEntry from "./components/HandEntry";
+import BetPanel from "./components/BetPanel";
 import PredictionPanel from "./components/PredictionPanel";
+import HandEntry from "./components/HandEntry";
 import RoadsPanel from "./components/RoadsPanel";
 import ShoePanel from "./components/ShoePanel";
 import styles from "./App.module.css";
 
-type Tab = "predict" | "roads" | "shoe";
+type Tab = "bet" | "predict" | "roads" | "shoe";
 type Phase = "betting" | "dealing" | "resolved" | null;
 
 export default function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [tab, setTab] = useState<Tab>("predict");
+  const [tab, setTab] = useState<Tab>("bet");
   const [handCount, setHandCount] = useState(0);
   const [phase, setPhase] = useState<Phase>(null);
 
@@ -26,7 +27,6 @@ export default function App() {
   }
 
   useEffect(() => {
-    // Initial load
     fetchState();
     chrome.storage.local.get('bac:phase', (data) => {
       setPhase((data['bac:phase'] as Phase) ?? null);
@@ -37,8 +37,7 @@ export default function App() {
       if ('bac:phase' in changes) {
         const p = changes['bac:phase'].newValue as Phase;
         setPhase(p);
-        // Auto-focus prediction tab when betting window opens
-        if (p === 'betting') setTab('predict');
+        if (p === 'betting' || p === 'resolved') setTab('bet');
       }
     };
     chrome.storage.onChanged.addListener(listener);
@@ -73,18 +72,24 @@ export default function App() {
       <HandEntry onSubmit={handleHandSubmit} nextId={handCount + 1} />
 
       <nav className={styles.tabs}>
-        {(["predict", "roads", "shoe"] as Tab[]).map((t) => (
+        {([
+          ["bet",     "Bet Now"],
+          ["predict", "Analysis"],
+          ["roads",   "Roads"],
+          ["shoe",    "Shoe"],
+        ] as [Tab, string][]).map(([t, label]) => (
           <button
             key={t}
             className={`${styles.tab} ${tab === t ? styles.active : ""}`}
             onClick={() => setTab(t)}
           >
-            {t === "predict" ? "Prediction" : t === "roads" ? "Roads" : "Shoe"}
+            {label}
           </button>
         ))}
       </nav>
 
       <main className={styles.content}>
+        {tab === "bet"     && <BetPanel result={result} phase={phase} />}
         {tab === "predict" && <PredictionPanel result={result} phase={phase} />}
         {tab === "roads"   && <RoadsPanel result={result} />}
         {tab === "shoe"    && <ShoePanel result={result} />}

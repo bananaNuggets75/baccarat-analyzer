@@ -20,7 +20,7 @@
   "content_scripts": [
     {
       "js": [
-        "assets/index.ts-DqGnX1cX.js"
+        "assets/index.ts-BiUafAhc.js"
       ],
       "matches": [
         "<all_urls>"
@@ -52,7 +52,7 @@
         "content/ws-interceptor.js",
         "assets/*.js",
         "assets/*.css",
-        "assets/index.ts-DqGnX1cX.js"
+        "assets/index.ts-BiUafAhc.js"
       ],
       "use_dynamic_url": false
     }

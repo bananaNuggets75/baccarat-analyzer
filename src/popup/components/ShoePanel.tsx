@@ -109,7 +109,10 @@ export default function ShoePanel({ result }: Props) {
         <div className={styles.historyHeader}>
           <span className={styles.title}>Last 10 Hands</span>
           <button className={styles.exportBtn} onClick={() => exportCSV(result)}>
-            Export CSV
+            This Shoe
+          </button>
+          <button className={styles.exportBtn} onClick={exportAllData}>
+            All Data
           </button>
         </div>
         {shoe.handsPlayed.slice(-10).reverse().map((h) => (

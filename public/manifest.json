@@ -20,7 +20,7 @@
     {
       "matches": ["<all_urls>"],
       "js": ["src/content/index.ts"],
-      "run_at": "document_idle"
+      "run_at": "document_start"
     }
   ],
   "action": {
@@ -41,6 +41,7 @@
       "matches": ["<all_urls>"],
       "resources": [
         "src/popup/index.html",
+        "content/ws-interceptor.js",
         "assets/*.js",
         "assets/*.css"
       ]

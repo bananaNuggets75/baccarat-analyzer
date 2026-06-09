@@ -175,6 +175,9 @@ function handleWsEvent(raw: unknown) {
         shoe = { ...shoe, penetration: out / (shoe.totalDecks * 52) };
         console.log(`[EVO] Shoe penetration: ${(shoe.penetration * 100).toFixed(1)}% (${out} cards out)`);
       }
+      // Persist now so the sidebar refreshes during the betting window,
+      // giving the prediction BEFORE cards are dealt.
+      persistShoe();
       break;
     }
   }

@@ -134,6 +134,7 @@ function handleWsEvent(raw: unknown) {
       const gameData = a.gameData as EvoGameData | undefined;
       if (gameId && gameData?.playerHand) {
         pendingGameData.set(gameId, gameData);
+        chrome.storage.local.set({ 'bac:phase': 'dealing' });
       }
       break;
     }
@@ -154,6 +155,7 @@ function handleWsEvent(raw: unknown) {
     case 'baccarat.resolved':
     case 'widget.resolved': {
       const gameId = a.gameId as string | undefined;
+      chrome.storage.local.set({ 'bac:phase': 'resolved' });
       if (gameId) finalizeHand(gameId);
       break;
     }
@@ -175,6 +177,10 @@ function handleWsEvent(raw: unknown) {
         shoe = { ...shoe, penetration: out / (shoe.totalDecks * 52) };
         console.log(`[EVO] Shoe penetration: ${(shoe.penetration * 100).toFixed(1)}% (${out} cards out)`);
       }
+      // Persist now so the sidebar refreshes during the betting window,
+      // giving the prediction BEFORE cards are dealt.
+      chrome.storage.local.set({ 'bac:phase': 'betting' });
+      persistShoe();
       break;
     }
   }

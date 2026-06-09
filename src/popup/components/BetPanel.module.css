@@ -1,0 +1,88 @@
+.root { display: flex; flex-direction: column; gap: 14px; }
+.empty { color: #4a5568; text-align: center; padding: 48px 0; font-size: 14px; }
+
+/* ── Status bars ── */
+
+/* 8 flashes × 0.25s = 2 seconds, then holds solid (forwards) */
+@keyframes flashBanner {
+  0%, 100% { opacity: 1;   background: #1a3a2a; }
+  50%      { opacity: 0.2; background: #0d1f17; }
+}
+@keyframes flashBox {
+  0%, 100% { box-shadow: 0 0 16px 3px #68d39155; }
+  50%      { box-shadow: 0 0 0   0px #68d39100; }
+}
+
+.bettingBar {
+  display: flex; align-items: center; gap: 8px;
+  background: #1a3a2a; border: 1px solid #38a169; border-radius: 8px;
+  color: #68d391; font-size: 13px; font-weight: 700; padding: 10px 14px;
+  animation: flashBanner 0.25s ease-in-out 8;
+  animation-fill-mode: forwards;
+}
+.dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+.dealingBar {
+  background: #1e1e28; border: 1px solid #4a5568; border-radius: 8px;
+  color: #718096; font-size: 13px; font-weight: 600; padding: 10px 14px;
+}
+.resolvedBar {
+  background: #1a1f2e; border: 1px solid #2d3748; border-radius: 8px;
+  color: #a0aec0; font-size: 12px; padding: 8px 14px;
+}
+
+/* ── Main bet box ── */
+.betBox {
+  border: 2px solid; border-radius: 14px;
+  background: #1a1f2e; padding: 24px 16px;
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.betBoxFlash {
+  animation: flashBox 0.25s ease-in-out 8;
+  animation-fill-mode: forwards;
+}
+
+.betLabel { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #718096; }
+.betValue { font-size: 52px; font-weight: 900; line-height: 1; letter-spacing: -1px; }
+.betHint  { font-size: 12px; color: #4a5568; }
+.noBets   { font-size: 22px; font-weight: 800; color: #4a5568; letter-spacing: 1px; }
+
+/* ── Forecast table ── */
+.forecastSection { background: #1a1f2e; border-radius: 10px; padding: 12px; }
+.forecastTitle {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+  color: #718096; margin-bottom: 12px;
+}
+
+.forecastGrid {
+  display: grid;
+  grid-template-columns: 70px 1fr 1fr 1fr;
+  row-gap: 10px;
+  align-items: center;
+}
+.fgHeader {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: #4a5568; text-align: center;
+}
+.fgBranchLabel {
+  font-size: 11px; font-weight: 700;
+  padding-right: 4px;
+}
+
+.forecastNote { font-size: 10px; color: #2d3748; margin-top: 10px; }
+
+/* ── Recent outcomes ── */
+.recentSection { background: #1a1f2e; border-radius: 10px; padding: 12px; }
+.recentTitle {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+  color: #718096; margin-bottom: 10px;
+}
+.recentRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chip {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: #0d1117;
+}
+.arrow { color: #4a5568; font-size: 18px; margin: 0 2px; }
+.noHistory { font-size: 11px; color: #4a5568; }

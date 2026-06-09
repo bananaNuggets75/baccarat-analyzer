@@ -1,13 +1,32 @@
 .root { display: flex; flex-direction: column; gap: 16px; }
 .empty { color: #4a5568; text-align: center; padding: 40px 0; font-size: 14px; }
 
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.bettingBanner {
+  display: flex; align-items: center; gap: 8px;
+  background: #1a3a2a; border: 1px solid #38a169; border-radius: 8px;
+  color: #68d391; font-size: 13px; font-weight: 700; padding: 10px 14px;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.bettingDot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #68d391; flex-shrink: 0;
+}
+.dealingBanner {
+  background: #1a2a3a; border: 1px solid #4299e1; border-radius: 8px;
+  color: #63b3ed; font-size: 13px; font-weight: 600; padding: 10px 14px;
+}
+
 .recommendation {
   border: 2px solid; border-radius: 12px; padding: 16px;
   text-align: center; background: #1a1f2e;
 }
 .recLabel { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096; }
 .recValue { font-size: 32px; font-weight: 800; margin: 4px 0; }
-.confidence { font-size: 12px; color: #718096; }
+.signalBadge { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.coverage { font-size: 11px; color: #718096; }
+.warn { color: #fc8181; }
 
 .section { background: #1a1f2e; border-radius: 10px; padding: 12px; }
 .sectionTitle { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096; margin-bottom: 10px; }
@@ -20,7 +39,6 @@
 
 .edgeRow { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
 
-.signal {
-  font-size: 13px; color: #a0aec0; text-align: center;
-  background: #1a1f2e; border-radius: 8px; padding: 10px;
-}
+.note { font-size: 11px; color: #4a5568; margin-top: 6px; }
+.patternValue { font-size: 18px; font-weight: 700; }
+.patternNote { font-size: 12px; font-weight: 400; color: #718096; }

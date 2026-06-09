@@ -19,12 +19,13 @@
   "content_scripts": [
     {
       "js": [
-        "assets/index.ts-Cta3GpD5.js"
+        "assets/index.ts-DqGnX1cX.js"
       ],
       "matches": [
         "<all_urls>"
       ],
-      "run_at": "document_start"
+      "run_at": "document_start",
+      "all_frames": true
     }
   ],
   "action": {
@@ -50,7 +51,7 @@
         "content/ws-interceptor.js",
         "assets/*.js",
         "assets/*.css",
-        "assets/index.ts-Cta3GpD5.js"
+        "assets/index.ts-DqGnX1cX.js"
       ],
       "use_dynamic_url": false
     }

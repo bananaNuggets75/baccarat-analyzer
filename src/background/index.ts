@@ -25,18 +25,41 @@ interface EvoHistoryEntry {
   natural?: boolean;
 }
 
+// ── Training log entry ───────────────────────────────────────────────────────
+interface LogEntry {
+  ts: number;
+  shoeId: string;
+  gameId: string;
+  outcome: string;
+  pScore: number;
+  bScore: number;
+  pCards: string; // e.g. "5H TD KS"
+  bCards: string;
+  nat: boolean;
+  pp: boolean;
+  bp: boolean;
+}
+
 // ── State ────────────────────────────────────────────────────────────────────
 let shoe: ShoeState = newShoe(8);
 let shoeHistoryLoaded = false;
+let currentShoeId: string = Date.now().toString();
+let lastShoeCardsOut = 0;
 const pendingGameData = new Map<string, EvoGameData>();
 const seenGameIds = new Set<string>();
 
-// Persist shoe to storage so it survives service worker restarts and session expiry
 function persistShoe() {
   chrome.storage.local.set({ 'bac:shoe': shoe });
 }
 
-// Load persisted shoe on service worker startup
+function appendToLog(entry: LogEntry) {
+  chrome.storage.local.get('bac:log', (data) => {
+    const log: LogEntry[] = (data['bac:log'] as LogEntry[]) ?? [];
+    log.push(entry);
+    chrome.storage.local.set({ 'bac:log': log });
+  });
+}
+
 chrome.storage.local.get('bac:shoe', (data) => {
   if (data['bac:shoe']) {
     shoe = data['bac:shoe'] as ShoeState;
@@ -70,6 +93,12 @@ chrome.runtime.onMessage.addListener((msg: ExtMessage, _sender, sendResponse) =>
     case "WS_GAME_EVENT": {
       handleWsEvent(msg.payload);
       sendResponse({ ok: true });
+      break;
+    }
+    case "GET_LOG": {
+      chrome.storage.local.get('bac:log', (data) => {
+        sendResponse({ ok: true, log: data['bac:log'] ?? [] });
+      });
       break;
     }
     default:

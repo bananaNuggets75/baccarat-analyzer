@@ -24,7 +24,6 @@ const BASE_BANKER_PAIR = -0.10540;
 const BASE_PLAYER_PAIR = -0.10540;
 
 function countRemaining(shoe: ShoeState): Record<string, number> {
-  const total = shoe.totalDecks * 52;
   const ranks = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
   const perRank = shoe.totalDecks * 4;
   const counts: Record<string, number> = {};
@@ -37,7 +36,6 @@ function countRemaining(shoe: ShoeState): Record<string, number> {
 
 export function calculateEdge(shoe: ShoeState): EdgeCalc {
   const remaining = countRemaining(shoe);
-  const totalRemaining = shoe.totalDecks * 52 - shoe.cardsDealt.length;
 
   let bankerAdj = 0;
   let playerAdj = 0;
@@ -61,7 +59,6 @@ export function calculateEdge(shoe: ShoeState): EdgeCalc {
   // 100% means the full shoe has been observed; 0% means no cards tracked yet.
   // (Using cardsDealt rather than spread so the number reflects real data coverage.)
   const tracked = shoe.cardsDealt.length / Math.max(shoe.totalDecks * 52, 1);
-  const spread = Math.abs(bankerEdge - playerEdge);
   const confidence = Math.min(tracked, 1);
 
   return {

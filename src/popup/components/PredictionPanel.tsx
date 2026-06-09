@@ -21,7 +21,7 @@ export default function PredictionPanel({ result }: Props) {
         <div className={styles.recLabel}>Recommended Bet</div>
         <div className={styles.recValue} style={{ color: COLOR[rec] }}>{LABEL[rec]}</div>
         <div className={styles.confidence}>
-          Model confidence: {pct(prediction.modelConfidence)}
+          Cards tracked: {pct(prediction.modelConfidence)}
         </div>
       </div>
 

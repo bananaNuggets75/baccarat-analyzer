@@ -85,6 +85,18 @@ export interface AnalysisResult {
 }
 
 export interface ExtMessage {
-  type: "ADD_HAND" | "RESET_SHOE" | "GET_STATE" | "SCREENSHOT_HAND";
+  type: "ADD_HAND" | "RESET_SHOE" | "GET_STATE" | "SCREENSHOT_HAND" | "WS_GAME_EVENT";
   payload?: unknown;
+}
+
+/** Raw card object as Evolution Gaming sends it over WebSocket (multiple formats) */
+export interface EvoRawCard {
+  suit?: number | string;   // 0-3 numeric, or "S"/"H"/"D"/"C", or "SPADES" etc.
+  value?: number | string;  // 1-13 numeric, or "A"/"2"-"9"/"T"/"J"/"Q"/"K"
+  // alternate field names seen in different Evolution versions
+  Suit?: number | string;
+  Value?: number | string;
+  s?: number | string;
+  v?: number | string;
+  rank?: number | string;
 }

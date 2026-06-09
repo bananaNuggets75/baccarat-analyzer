@@ -2,7 +2,7 @@
  * Baccarat edge calculation based on remaining shoe composition.
  * Uses the Thorp & Walden / Griffin derived point values for each rank.
  */
-import type { Card, EdgeCalc, ShoeState } from "../types";
+import type { EdgeCalc, ShoeState } from "../types";
 
 // Edge effect of removing one card of each rank from an 8-deck shoe
 // Positive = benefits banker, negative = benefits player
@@ -57,8 +57,12 @@ export function calculateEdge(shoe: ShoeState): EdgeCalc {
   let recommendation: "banker" | "player" | "tie" = "banker";
   if (playerEdge > bankerEdge) recommendation = "player";
 
+  // Confidence = fraction of shoe actually tracked via live card data.
+  // 100% means the full shoe has been observed; 0% means no cards tracked yet.
+  // (Using cardsDealt rather than spread so the number reflects real data coverage.)
+  const tracked = shoe.cardsDealt.length / Math.max(shoe.totalDecks * 52, 1);
   const spread = Math.abs(bankerEdge - playerEdge);
-  const confidence = Math.min(spread / 0.5, 1); // normalize to 0–1
+  const confidence = Math.min(tracked, 1);
 
   return {
     bankerEdge,

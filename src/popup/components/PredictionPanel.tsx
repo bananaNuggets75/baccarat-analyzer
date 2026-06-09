@@ -19,7 +19,7 @@ const SIGNAL_COLOR: Record<string, string> = {
 };
 
 function pct(n: number) { return (n * 100).toFixed(1) + "%"; }
-function edge(n: number) { return (n >= 0 ? "+" : "") + n.toFixed(3) + "%"; }
+function edgeFmt(n: number) { return (n >= 0 ? "+" : "") + n.toFixed(3) + "%"; }
 
 export default function PredictionPanel({ result, phase }: Props) {
   if (!result) return <div className={styles.empty}>Waiting for hand data…</div>;
@@ -27,8 +27,6 @@ export default function PredictionPanel({ result, phase }: Props) {
   const { prediction, edge: edgeCalc } = result;
   const rec = prediction.recommended;
   const src = prediction.signalSource;
-
-  const lastHand = result.shoe?.handsPlayed?.at(-1);
 
   return (
     <div className={styles.root}>
@@ -42,13 +40,6 @@ export default function PredictionPanel({ result, phase }: Props) {
       )}
       {phase === 'dealing' && (
         <div className={styles.dealingBanner}>Dealing cards…</div>
-      )}
-      {phase === 'resolved' && lastHand && (
-        <div className={styles.resolvedBanner}>
-          Last hand: <strong style={{ color: COLOR[lastHand.outcome] }}>
-            {LABEL[lastHand.outcome]}
-          </strong> (P:{lastHand.playerScore} B:{lastHand.bankerScore})
-        </div>
       )}
 
       {/* ── Recommendation ── */}
@@ -98,7 +89,7 @@ export default function PredictionPanel({ result, phase }: Props) {
           return (
             <div key={side} className={styles.edgeRow}>
               <span style={{ color: COLOR[side] }}>{LABEL[side]}</span>
-              <span style={{ color: val > 0 ? "#68d391" : "#fc8181" }}>{edge(val)}</span>
+              <span style={{ color: val > 0 ? "#68d391" : "#fc8181" }}>{edgeFmt(val)}</span>
             </div>
           );
         })}

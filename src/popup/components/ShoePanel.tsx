@@ -5,6 +5,32 @@ interface Props { result: AnalysisResult | null }
 
 const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"] as const;
 
+function exportCSV(result: AnalysisResult) {
+  const rows = [
+    ["Hand","Winner","PlayerScore","BankerScore","PlayerCards","BankerCards","Natural","PlayerPair","BankerPair"],
+    ...result.shoe.handsPlayed.map((h) => [
+      h.id,
+      h.outcome,
+      h.playerScore,
+      h.bankerScore,
+      h.playerCards.map((c) => c.rank + c.suit[0].toUpperCase()).join(" "),
+      h.bankerCards.map((c) => c.rank + c.suit[0].toUpperCase()).join(" "),
+      h.natural ?? "",
+      h.playerPair ? "Y" : "N",
+      h.bankerPair ? "Y" : "N",
+    ]),
+  ];
+
+  const csv = rows.map((r) => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `baccarat-${new Date().toISOString().slice(0,19).replace(/:/g,"-")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ShoePanel({ result }: Props) {
   if (!result) return <div className={styles.empty}>Enter hands to see shoe data.</div>;
   const { shoe } = result;
@@ -13,7 +39,6 @@ export default function ShoePanel({ result }: Props) {
   const remaining = total - dealt;
   const pct = (shoe.penetration * 100).toFixed(1);
 
-  // Count remaining cards per rank
   const perRank = shoe.totalDecks * 4;
   const dealtCount: Record<string, number> = {};
   for (const c of shoe.cardsDealt) {
@@ -57,7 +82,12 @@ export default function ShoePanel({ result }: Props) {
       </div>
 
       <div className={styles.history}>
-        <div className={styles.title}>Last 10 Hands</div>
+        <div className={styles.historyHeader}>
+          <span className={styles.title}>Last 10 Hands</span>
+          <button className={styles.exportBtn} onClick={() => exportCSV(result)}>
+            Export CSV
+          </button>
+        </div>
         {shoe.handsPlayed.slice(-10).reverse().map((h) => (
           <div key={h.id} className={styles.handRow}>
             <span className={styles.handId}>#{h.id}</span>
@@ -66,6 +96,8 @@ export default function ShoePanel({ result }: Props) {
             </span>
             <span className={styles.handScore}>{h.playerScore} – {h.bankerScore}</span>
             {h.natural && <span className={styles.natural}>N</span>}
+            {h.playerPair && <span className={styles.pair}>PP</span>}
+            {h.bankerPair && <span className={styles.pair}>BP</span>}
           </div>
         ))}
       </div>

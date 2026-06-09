@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import type { AnalysisResult, Hand } from "../types";
-import { buildHand } from "../analysis/scoring";
 import HandEntry from "./components/HandEntry";
 import PredictionPanel from "./components/PredictionPanel";
 import RoadsPanel from "./components/RoadsPanel";

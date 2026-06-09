@@ -12,6 +12,7 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "types": ["chrome"],
     "outDir": "dist",
     "rootDir": "src"
   },

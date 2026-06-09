@@ -1,2 +1,0 @@
-(function(){function n(){if(document.getElementById("bac-analyzer-root"))return;const e=document.createElement("iframe");e.id="bac-analyzer-root",e.src=chrome.runtime.getURL("src/popup/index.html"),Object.assign(e.style,{position:"fixed",top:"0",right:"0",width:"360px",height:"100vh",border:"none",zIndex:"2147483647",boxShadow:"-4px 0 20px rgba(0,0,0,0.4)"}),document.body.appendChild(e)}chrome.runtime.onMessage.addListener(e=>{if(e.type==="TOGGLE_SIDEBAR"){const t=document.getElementById("bac-analyzer-root");t?t.remove():n()}});n();
-})()

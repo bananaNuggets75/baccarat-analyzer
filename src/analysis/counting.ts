@@ -2,7 +2,7 @@
  * Baccarat edge calculation based on remaining shoe composition.
  * Uses the Thorp & Walden / Griffin derived point values for each rank.
  */
-import type { Card, EdgeCalc, ShoeState } from "../types";
+import type { EdgeCalc, ShoeState } from "../types";
 
 // Edge effect of removing one card of each rank from an 8-deck shoe
 // Positive = benefits banker, negative = benefits player
@@ -24,7 +24,6 @@ const BASE_BANKER_PAIR = -0.10540;
 const BASE_PLAYER_PAIR = -0.10540;
 
 function countRemaining(shoe: ShoeState): Record<string, number> {
-  const total = shoe.totalDecks * 52;
   const ranks = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
   const perRank = shoe.totalDecks * 4;
   const counts: Record<string, number> = {};
@@ -37,7 +36,6 @@ function countRemaining(shoe: ShoeState): Record<string, number> {
 
 export function calculateEdge(shoe: ShoeState): EdgeCalc {
   const remaining = countRemaining(shoe);
-  const totalRemaining = shoe.totalDecks * 52 - shoe.cardsDealt.length;
 
   let bankerAdj = 0;
   let playerAdj = 0;
@@ -57,8 +55,11 @@ export function calculateEdge(shoe: ShoeState): EdgeCalc {
   let recommendation: "banker" | "player" | "tie" = "banker";
   if (playerEdge > bankerEdge) recommendation = "player";
 
-  const spread = Math.abs(bankerEdge - playerEdge);
-  const confidence = Math.min(spread / 0.5, 1); // normalize to 0–1
+  // Confidence = fraction of shoe actually tracked via live card data.
+  // 100% means the full shoe has been observed; 0% means no cards tracked yet.
+  // (Using cardsDealt rather than spread so the number reflects real data coverage.)
+  const tracked = shoe.cardsDealt.length / Math.max(shoe.totalDecks * 52, 1);
+  const confidence = Math.min(tracked, 1);
 
   return {
     bankerEdge,

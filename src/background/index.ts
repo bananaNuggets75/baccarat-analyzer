@@ -25,18 +25,41 @@ interface EvoHistoryEntry {
   natural?: boolean;
 }
 
+// ── Training log entry ───────────────────────────────────────────────────────
+interface LogEntry {
+  ts: number;
+  shoeId: string;
+  gameId: string;
+  outcome: string;
+  pScore: number;
+  bScore: number;
+  pCards: string; // e.g. "5H TD KS"
+  bCards: string;
+  nat: boolean;
+  pp: boolean;
+  bp: boolean;
+}
+
 // ── State ────────────────────────────────────────────────────────────────────
 let shoe: ShoeState = newShoe(8);
 let shoeHistoryLoaded = false;
+let currentShoeId: string = Date.now().toString();
+let lastShoeCardsOut = 0;
 const pendingGameData = new Map<string, EvoGameData>();
 const seenGameIds = new Set<string>();
 
-// Persist shoe to storage so it survives service worker restarts and session expiry
 function persistShoe() {
   chrome.storage.local.set({ 'bac:shoe': shoe });
 }
 
-// Load persisted shoe on service worker startup
+function appendToLog(entry: LogEntry) {
+  chrome.storage.local.get('bac:log', (data) => {
+    const log: LogEntry[] = (data['bac:log'] as LogEntry[]) ?? [];
+    log.push(entry);
+    chrome.storage.local.set({ 'bac:log': log });
+  });
+}
+
 chrome.storage.local.get('bac:shoe', (data) => {
   if (data['bac:shoe']) {
     shoe = data['bac:shoe'] as ShoeState;
@@ -70,6 +93,12 @@ chrome.runtime.onMessage.addListener((msg: ExtMessage, _sender, sendResponse) =>
     case "WS_GAME_EVENT": {
       handleWsEvent(msg.payload);
       sendResponse({ ok: true });
+      break;
+    }
+    case "GET_LOG": {
+      chrome.storage.local.get('bac:log', (data) => {
+        sendResponse({ ok: true, log: data['bac:log'] ?? [] });
+      });
       break;
     }
     default:
@@ -133,6 +162,16 @@ function handleWsEvent(raw: unknown) {
     case 'baccarat.newGame': {
       const out = a.shoeCardsOut as number | undefined;
       if (typeof out === 'number') {
+        // Detect shoe shuffle: cards-out counter reset below last known value
+        if (out < lastShoeCardsOut - 10) {
+          currentShoeId = Date.now().toString();
+          shoeHistoryLoaded = false;
+          shoe = newShoe(8);
+          pendingGameData.clear();
+          seenGameIds.clear();
+          console.log('[EVO] New shoe detected — state reset');
+        }
+        lastShoeCardsOut = out;
         shoe = { ...shoe, penetration: out / (shoe.totalDecks * 52) };
         console.log(`[EVO] Shoe penetration: ${(shoe.penetration * 100).toFixed(1)}% (${out} cards out)`);
       }
@@ -190,6 +229,20 @@ function finalizeHand(gameId: string) {
   const hand = buildHand(shoe.handsPlayed.length + 1, playerCards, bankerCards);
   shoe = addHandToShoe(shoe, hand);
   persistShoe();
+
+  appendToLog({
+    ts: Date.now(),
+    shoeId: currentShoeId,
+    gameId,
+    outcome: hand.outcome,
+    pScore: hand.playerScore,
+    bScore: hand.bankerScore,
+    pCards: playerCards.map(c => c.rank + c.suit[0].toUpperCase()).join(' '),
+    bCards: bankerCards.map(c => c.rank + c.suit[0].toUpperCase()).join(' '),
+    nat: !!hand.natural,
+    pp: hand.playerPair,
+    bp: hand.bankerPair,
+  });
 
   const result = analyze(shoe);
   console.log(

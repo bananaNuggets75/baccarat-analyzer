@@ -5,6 +5,30 @@ interface Props { result: AnalysisResult | null }
 
 const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"] as const;
 
+function exportAllData() {
+  chrome.runtime.sendMessage({ type: 'GET_LOG' }, (res) => {
+    if (!res?.ok || !res.log?.length) return;
+    const rows = [
+      ['Timestamp','ShoeID','GameID','Winner','PlayerScore','BankerScore','PlayerCards','BankerCards','Natural','PlayerPair','BankerPair'],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...res.log.map((e: any) => [
+        new Date(e.ts).toISOString(), e.shoeId, e.gameId,
+        e.outcome, e.pScore, e.bScore,
+        e.pCards, e.bCards,
+        e.nat ? 'Y' : 'N', e.pp ? 'Y' : 'N', e.bp ? 'Y' : 'N',
+      ]),
+    ];
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `baccarat-training-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
 function exportCSV(result: AnalysisResult) {
   const rows = [
     ["Hand","Winner","PlayerScore","BankerScore","PlayerCards","BankerCards","Natural","PlayerPair","BankerPair"],
@@ -85,7 +109,10 @@ export default function ShoePanel({ result }: Props) {
         <div className={styles.historyHeader}>
           <span className={styles.title}>Last 10 Hands</span>
           <button className={styles.exportBtn} onClick={() => exportCSV(result)}>
-            Export CSV
+            This Shoe
+          </button>
+          <button className={styles.exportBtn} onClick={exportAllData}>
+            All Data
           </button>
         </div>
         {shoe.handsPlayed.slice(-10).reverse().map((h) => (

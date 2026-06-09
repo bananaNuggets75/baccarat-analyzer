@@ -46,6 +46,9 @@
         "<all_urls>"
       ],
       "resources": [
+        "src/popup/index.html",
+        "assets/*.js",
+        "assets/*.css",
         "assets/index.ts-DqiKT84S.js"
       ],
       "use_dynamic_url": false

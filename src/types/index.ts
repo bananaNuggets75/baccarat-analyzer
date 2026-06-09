@@ -85,7 +85,7 @@ export interface AnalysisResult {
 }
 
 export interface ExtMessage {
-  type: "ADD_HAND" | "RESET_SHOE" | "GET_STATE" | "SCREENSHOT_HAND" | "WS_GAME_EVENT";
+  type: "ADD_HAND" | "RESET_SHOE" | "GET_STATE" | "SCREENSHOT_HAND" | "WS_GAME_EVENT" | "GET_LOG";
   payload?: unknown;
 }
 

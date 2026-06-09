@@ -162,6 +162,16 @@ function handleWsEvent(raw: unknown) {
     case 'baccarat.newGame': {
       const out = a.shoeCardsOut as number | undefined;
       if (typeof out === 'number') {
+        // Detect shoe shuffle: cards-out counter reset below last known value
+        if (out < lastShoeCardsOut - 10) {
+          currentShoeId = Date.now().toString();
+          shoeHistoryLoaded = false;
+          shoe = newShoe(8);
+          pendingGameData.clear();
+          seenGameIds.clear();
+          console.log('[EVO] New shoe detected — state reset');
+        }
+        lastShoeCardsOut = out;
         shoe = { ...shoe, penetration: out / (shoe.totalDecks * 52) };
         console.log(`[EVO] Shoe penetration: ${(shoe.penetration * 100).toFixed(1)}% (${out} cards out)`);
       }

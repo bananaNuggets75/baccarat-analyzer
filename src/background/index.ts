@@ -49,6 +49,7 @@ chrome.runtime.onMessage.addListener((msg: ExtMessage, _sender, sendResponse) =>
   switch (msg.type) {
     case "ADD_HAND": {
       shoe = addHandToShoe(shoe, msg.payload as Hand);
+      persistShoe();
       sendResponse({ ok: true, result: analyze(shoe) });
       break;
     }
@@ -58,6 +59,7 @@ chrome.runtime.onMessage.addListener((msg: ExtMessage, _sender, sendResponse) =>
       shoeHistoryLoaded = false;
       pendingGameData.clear();
       seenGameIds.clear();
+      persistShoe();
       sendResponse({ ok: true });
       break;
     }

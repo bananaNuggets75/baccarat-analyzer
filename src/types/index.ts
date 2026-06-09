@@ -67,14 +67,17 @@ export interface Roads {
   cockroachPig: boolean[][];
 }
 
+export type SignalSource = "default" | "pattern" | "count";
+
 export interface Prediction {
   recommended: HandOutcome;
   bankerProb: number;
   playerProb: number;
   tieProb: number;
-  modelConfidence: number;
+  modelConfidence: number; // fraction of shoe tracked (0–1)
   patternSignal: HandOutcome | null;
   edgeSignal: HandOutcome;
+  signalSource: SignalSource;
 }
 
 export interface AnalysisResult {

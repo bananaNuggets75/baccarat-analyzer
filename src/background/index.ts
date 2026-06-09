@@ -28,10 +28,21 @@ interface EvoHistoryEntry {
 // ── State ────────────────────────────────────────────────────────────────────
 let shoe: ShoeState = newShoe(8);
 let shoeHistoryLoaded = false;
-// gameId → latest gameData snapshot (updated on every baccarat.cardDealt)
 const pendingGameData = new Map<string, EvoGameData>();
-// gameIds already added to shoe (deduplication)
 const seenGameIds = new Set<string>();
+
+// Persist shoe to storage so it survives service worker restarts and session expiry
+function persistShoe() {
+  chrome.storage.local.set({ 'bac:shoe': shoe });
+}
+
+// Load persisted shoe on service worker startup
+chrome.storage.local.get('bac:shoe', (data) => {
+  if (data['bac:shoe']) {
+    shoe = data['bac:shoe'] as ShoeState;
+    console.log(`[EVO] Restored ${shoe.handsPlayed.length} hands from storage`);
+  }
+});
 
 // ── Extension message handler ────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg: ExtMessage, _sender, sendResponse) => {

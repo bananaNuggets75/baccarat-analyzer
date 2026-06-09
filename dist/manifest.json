@@ -7,7 +7,8 @@
     "activeTab",
     "scripting",
     "storage",
-    "tabs"
+    "tabs",
+    "downloads"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -19,12 +20,13 @@
   "content_scripts": [
     {
       "js": [
-        "assets/index.ts-DqiKT84S.js"
+        "assets/index.ts-DqGnX1cX.js"
       ],
       "matches": [
         "<all_urls>"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_start",
+      "all_frames": true
     }
   ],
   "action": {
@@ -46,7 +48,11 @@
         "<all_urls>"
       ],
       "resources": [
-        "assets/index.ts-DqiKT84S.js"
+        "src/popup/index.html",
+        "content/ws-interceptor.js",
+        "assets/*.js",
+        "assets/*.css",
+        "assets/index.ts-DqGnX1cX.js"
       ],
       "use_dynamic_url": false
     }

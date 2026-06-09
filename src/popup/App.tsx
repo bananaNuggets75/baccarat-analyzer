@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import type { AnalysisResult, Hand, HandOutcome } from "../types";
-import { buildHand } from "../analysis/scoring";
+import type { AnalysisResult, Hand } from "../types";
 import HandEntry from "./components/HandEntry";
 import PredictionPanel from "./components/PredictionPanel";
 import RoadsPanel from "./components/RoadsPanel";
@@ -14,10 +13,26 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("predict");
   const [handCount, setHandCount] = useState(0);
 
-  useEffect(() => {
+  function fetchState() {
     chrome.runtime.sendMessage({ type: "GET_STATE" }, (res) => {
-      if (res?.ok) setResult(res.result);
+      if (chrome.runtime.lastError) return;
+      if (res?.ok) {
+        setResult(res.result);
+        setHandCount(res.shoe?.handsPlayed?.length ?? 0);
+      }
     });
+  }
+
+  useEffect(() => {
+    // Initial load
+    fetchState();
+
+    // Auto-refresh whenever the background persists a new hand to storage
+    const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
+      if ('bac:shoe' in changes) fetchState();
+    };
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
   }, []);
 
   function handleHandSubmit(hand: Hand) {

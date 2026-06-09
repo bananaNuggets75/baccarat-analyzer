@@ -7,7 +7,8 @@
     "activeTab",
     "scripting",
     "storage",
-    "tabs"
+    "tabs",
+    "downloads"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -20,7 +21,8 @@
     {
       "matches": ["<all_urls>"],
       "js": ["src/content/index.ts"],
-      "run_at": "document_idle"
+      "run_at": "document_start",
+      "all_frames": true
     }
   ],
   "action": {
@@ -35,5 +37,16 @@
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "matches": ["<all_urls>"],
+      "resources": [
+        "src/popup/index.html",
+        "content/ws-interceptor.js",
+        "assets/*.js",
+        "assets/*.css"
+      ]
+    }
+  ]
 }

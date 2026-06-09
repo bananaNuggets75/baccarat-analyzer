@@ -24,7 +24,14 @@
 .rankOf { font-size: 9px; color: #4a5568; }
 
 .history { display: flex; flex-direction: column; gap: 4px; }
-.title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096; margin-bottom: 4px; }
+.historyHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096; }
+.exportBtn {
+  font-size: 11px; padding: 3px 8px; border-radius: 5px;
+  background: #2d3748; color: #a0aec0; border: 1px solid #4a5568;
+  cursor: pointer;
+}
+.exportBtn:hover { background: #4a5568; color: #e2e8f0; }
 .handRow {
   display: flex; align-items: center; gap: 8px;
   background: #1a1f2e; border-radius: 8px; padding: 8px 10px;
@@ -37,3 +44,4 @@
 .handOutcome.tie    { color: #68d391; }
 .handScore { color: #a0aec0; margin-left: auto; }
 .natural { font-size: 10px; background: #f6c90e; color: #1a1f2e; border-radius: 4px; padding: 1px 5px; font-weight: 700; }
+.pair { font-size: 10px; background: #553c9a; color: #e9d8fd; border-radius: 4px; padding: 1px 5px; font-weight: 700; }

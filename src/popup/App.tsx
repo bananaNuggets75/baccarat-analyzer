@@ -7,11 +7,13 @@ import ShoePanel from "./components/ShoePanel";
 import styles from "./App.module.css";
 
 type Tab = "predict" | "roads" | "shoe";
+type Phase = "betting" | "dealing" | "resolved" | null;
 
 export default function App() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [tab, setTab] = useState<Tab>("predict");
   const [handCount, setHandCount] = useState(0);
+  const [phase, setPhase] = useState<Phase>(null);
 
   function fetchState() {
     chrome.runtime.sendMessage({ type: "GET_STATE" }, (res) => {
@@ -26,10 +28,18 @@ export default function App() {
   useEffect(() => {
     // Initial load
     fetchState();
+    chrome.storage.local.get('bac:phase', (data) => {
+      setPhase((data['bac:phase'] as Phase) ?? null);
+    });
 
-    // Auto-refresh whenever the background persists a new hand to storage
     const listener = (changes: Record<string, chrome.storage.StorageChange>) => {
       if ('bac:shoe' in changes) fetchState();
+      if ('bac:phase' in changes) {
+        const p = changes['bac:phase'].newValue as Phase;
+        setPhase(p);
+        // Auto-focus prediction tab when betting window opens
+        if (p === 'betting') setTab('predict');
+      }
     };
     chrome.storage.onChanged.addListener(listener);
     return () => chrome.storage.onChanged.removeListener(listener);
@@ -75,7 +85,7 @@ export default function App() {
       </nav>
 
       <main className={styles.content}>
-        {tab === "predict" && <PredictionPanel result={result} />}
+        {tab === "predict" && <PredictionPanel result={result} phase={phase} />}
         {tab === "roads"   && <RoadsPanel result={result} />}
         {tab === "shoe"    && <ShoePanel result={result} />}
       </main>

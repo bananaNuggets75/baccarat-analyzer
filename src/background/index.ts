@@ -1,24 +1,52 @@
 import { analyze, addHandToShoe, newShoe } from "../analysis";
 import { buildHand } from "../analysis/scoring";
-import type { Card, EvoRawCard, ExtMessage, Hand, Rank, ShoeState, Suit } from "../types";
+import type { Card, ExtMessage, Hand, NaturalType, Rank, ShoeState, Suit } from "../types";
 
+// ── Evolution Gaming wire types ──────────────────────────────────────────────
+interface EvoGameData {
+  playerHand: { cards: string[]; score: number };
+  bankerHand: { cards: string[]; score: number };
+  result?: {
+    winner: string;
+    playerScore: number;
+    bankerScore: number;
+    playerPair: boolean;
+    bankerPair: boolean;
+    natural: boolean;
+  };
+}
+
+interface EvoHistoryEntry {
+  winner: string;
+  playerScore: number;
+  bankerScore: number;
+  playerPair?: boolean;
+  bankerPair?: boolean;
+  natural?: boolean;
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
 let shoe: ShoeState = newShoe(8);
-// Track round IDs we've already processed to avoid double-counting
-const seenRounds = new Set<string>();
+let shoeHistoryLoaded = false;
+// gameId → latest gameData snapshot (updated on every baccarat.cardDealt)
+const pendingGameData = new Map<string, EvoGameData>();
+// gameIds already added to shoe (deduplication)
+const seenGameIds = new Set<string>();
 
-// ── Message handler ──────────────────────────────────────────────────────────
+// ── Extension message handler ────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg: ExtMessage, _sender, sendResponse) => {
   switch (msg.type) {
     case "ADD_HAND": {
-      const hand = msg.payload as Hand;
-      shoe = addHandToShoe(shoe, hand);
+      shoe = addHandToShoe(shoe, msg.payload as Hand);
       sendResponse({ ok: true, result: analyze(shoe) });
       break;
     }
     case "RESET_SHOE": {
       const decks = (msg.payload as { decks?: number })?.decks ?? 8;
       shoe = newShoe(decks);
-      seenRounds.clear();
+      shoeHistoryLoaded = false;
+      pendingGameData.clear();
+      seenGameIds.clear();
       sendResponse({ ok: true });
       break;
     }
@@ -37,182 +65,151 @@ chrome.runtime.onMessage.addListener((msg: ExtMessage, _sender, sendResponse) =>
   return true;
 });
 
-// ── Evolution Gaming WebSocket event handler ─────────────────────────────────
+// ── Evolution WebSocket dispatcher ───────────────────────────────────────────
 function handleWsEvent(raw: unknown) {
   if (!raw || typeof raw !== 'object') return;
-  const msg = raw as Record<string, unknown>;
+  const { type, args } = raw as { type: string; args: Record<string, unknown> };
+  if (!type) return;
 
-  // Log every non-trivial game event so we can inspect from the service worker console
-  console.log('[EVO WS]', msg.type, JSON.stringify(msg.args ?? {}).substring(0, 300));
+  console.log('[EVO WS]', type, JSON.stringify(args ?? {}).substring(0, 300));
 
-  const parsed = tryParseHand(msg);
-  if (!parsed) return;
+  const a = (args ?? {}) as Record<string, unknown>;
 
-  const roundKey = parsed.roundId ?? `${parsed.playerCards.map(c => c.rank + c.suit[0]).join('')}-${parsed.bankerCards.map(c => c.rank + c.suit[0]).join('')}`;
-  if (seenRounds.has(roundKey)) return;
-  seenRounds.add(roundKey);
+  switch (type) {
+    // Full shoe history — sent once when the socket connects
+    case 'baccarat.shoeState':
+    case 'baccarat.encodedShoeState':
+      if (!shoeHistoryLoaded) {
+        loadShoeHistory(a);
+        shoeHistoryLoaded = true;
+      }
+      break;
 
-  const hand = buildHand(shoe.handsPlayed.length + 1, parsed.playerCards, parsed.bankerCards);
+    // Track card data for the active game so we have it when the round resolves
+    case 'baccarat.cardDealt':
+    case 'baccarat.gameState': {
+      const gameId = a.gameId as string | undefined;
+      const gameData = a.gameData as EvoGameData | undefined;
+      if (gameId && gameData?.playerHand) {
+        pendingGameData.set(gameId, gameData);
+      }
+      break;
+    }
+
+    // baccarat.tableState nests currentGame.gameData — useful when joining mid-hand
+    case 'baccarat.tableState': {
+      const current = a.currentGame as Record<string, unknown> | undefined;
+      if (current?.gameId && current.gameData) {
+        pendingGameData.set(
+          current.gameId as string,
+          current.gameData as EvoGameData
+        );
+      }
+      break;
+    }
+
+    // Hand resolved — build and store the hand
+    case 'baccarat.resolved':
+    case 'widget.resolved': {
+      const gameId = a.gameId as string | undefined;
+      if (gameId) finalizeHand(gameId);
+      break;
+    }
+
+    // New game starting — use Evolution's authoritative shoeCardsOut for penetration
+    case 'baccarat.newGame': {
+      const out = a.shoeCardsOut as number | undefined;
+      if (typeof out === 'number') {
+        shoe = { ...shoe, penetration: out / (shoe.totalDecks * 52) };
+        console.log(`[EVO] Shoe penetration: ${(shoe.penetration * 100).toFixed(1)}% (${out} cards out)`);
+      }
+      break;
+    }
+  }
+}
+
+// ── Load shoe history on connect ─────────────────────────────────────────────
+function loadShoeHistory(args: Record<string, unknown>) {
+  const history = (args.history ?? args.history_v2) as EvoHistoryEntry[] | undefined;
+  if (!history?.length) return;
+
+  const syntheticHands: Hand[] = history.map((entry, i) => ({
+    id: i + 1,
+    playerCards: [] as Card[],
+    bankerCards: [] as Card[],
+    outcome: normalizeWinner(entry.winner),
+    playerScore: entry.playerScore,
+    bankerScore: entry.bankerScore,
+    natural: entry.natural
+      ? (entry.playerScore === 9 || entry.bankerScore === 9 ? 'natural9' : 'natural8') as NaturalType
+      : null,
+    playerPair: entry.playerPair ?? false,
+    bankerPair: entry.bankerPair ?? false,
+    timestamp: Date.now(),
+  }));
+
+  shoe = { ...shoe, handsPlayed: syntheticHands };
+  console.log(`[EVO] Loaded ${syntheticHands.length} historical hands from shoe state`);
+}
+
+// ── Finalize a resolved hand ──────────────────────────────────────────────────
+function finalizeHand(gameId: string) {
+  if (seenGameIds.has(gameId)) return;
+
+  const gameData = pendingGameData.get(gameId);
+  if (!gameData?.playerHand?.cards?.length || !gameData?.bankerHand?.cards?.length) {
+    console.warn('[EVO] No card data for resolved game', gameId);
+    return;
+  }
+
+  const playerCards = gameData.playerHand.cards.map(parseCardStr).filter(Boolean) as Card[];
+  const bankerCards = gameData.bankerHand.cards.map(parseCardStr).filter(Boolean) as Card[];
+
+  if (playerCards.length < 2 || bankerCards.length < 2) {
+    console.warn('[EVO] Insufficient cards:', playerCards.length, 'player,', bankerCards.length, 'banker');
+    return;
+  }
+
+  seenGameIds.add(gameId);
+  pendingGameData.delete(gameId);
+
+  const hand = buildHand(shoe.handsPlayed.length + 1, playerCards, bankerCards);
   shoe = addHandToShoe(shoe, hand);
-  console.log('[EVO] Auto-added hand', hand.outcome, '| Shoe penetration', (shoe.penetration * 100).toFixed(1) + '%');
-}
 
-// ── Card parser — handles multiple Evolution message formats ─────────────────
-interface ParsedHand {
-  playerCards: Card[];
-  bankerCards: Card[];
-  roundId?: string;
-}
-
-function tryParseHand(msg: Record<string, unknown>): ParsedHand | null {
-  const args = msg.args as Record<string, unknown> | undefined;
-  if (!args) return null;
-
-  // Only try to extract a hand from messages that indicate a completed round
-  if (!isCompletedRound(args)) return null;
-
-  const roundId = extractRoundId(args);
-  const cards = findCardArrays(args);
-  if (!cards) return null;
-
-  const playerCards = cards.player.map(normalizeCard).filter(Boolean) as Card[];
-  const bankerCards = cards.banker.map(normalizeCard).filter(Boolean) as Card[];
-
-  // A valid baccarat hand always has at least 2 cards per side
-  if (playerCards.length < 2 || bankerCards.length < 2) return null;
-  if (playerCards.length > 3 || bankerCards.length > 3) return null;
-
-  return { playerCards, bankerCards, roundId };
-}
-
-/** Checks whether a message args object signals a completed/resolved round */
-function isCompletedRound(args: Record<string, unknown>): boolean {
-  const str = JSON.stringify(args).toUpperCase();
-  return (
-    str.includes('RESOLVED') ||
-    str.includes('FINISHED') ||
-    str.includes('GAME_RESOLVED') ||
-    str.includes('"WINNER"') ||
-    str.includes('"RESULT"') ||
-    str.includes('PLAYER_WIN') ||
-    str.includes('BANKER_WIN') ||
-    str.includes('TIE_WIN') ||
-    str.includes('"DECIDED"')
+  const result = analyze(shoe);
+  console.log(
+    `[EVO] Hand #${shoe.handsPlayed.length}: ${hand.outcome.toUpperCase()}`,
+    `P:${hand.playerScore} B:${hand.bankerScore}`,
+    `| Recommend: ${result.prediction.recommended.toUpperCase()}`,
+    `(${(result.prediction.bankerProb * 100).toFixed(1)}% B / ${(result.prediction.playerProb * 100).toFixed(1)}% P)`,
+    `| Shoe ${(shoe.penetration * 100).toFixed(1)}%`
   );
 }
 
-/** Extracts a round/game ID for deduplication */
-function extractRoundId(args: Record<string, unknown>): string | undefined {
-  const str = JSON.stringify(args);
-  const match = str.match(/"(?:roundId|gameId|round_id|id)"\s*:\s*"([^"]+)"/i);
-  return match?.[1];
+// ── Card string parser: "TD"→10♦, "5H"→5♥, "KS"→K♠ ─────────────────────────
+function parseCardStr(s: string): Card | null {
+  if (typeof s !== 'string' || s.length !== 2) return null;
+  const rankChar = s[0].toUpperCase();
+  const suitChar = s[1].toUpperCase();
+
+  const rankMap: Record<string, Rank> = {
+    A: 'A', '2': '2', '3': '3', '4': '4', '5': '5',
+    '6': '6', '7': '7', '8': '8', '9': '9',
+    T: '10', J: 'J', Q: 'Q', K: 'K',
+  };
+  const suitMap: Record<string, Suit> = {
+    H: 'hearts', D: 'diamonds', C: 'clubs', S: 'spades',
+  };
+
+  const rank = rankMap[rankChar];
+  const suit = suitMap[suitChar];
+  if (!rank || !suit) return null;
+  return { rank, suit };
 }
 
-/**
- * Recursively searches for an object with player/banker card arrays.
- * Handles variations like { player: [...], banker: [...] }
- * or { PLAYER: [...], BANKER: [...] } or { Player: [...], Banker: [...] }.
- */
-function findCardArrays(
-  obj: unknown,
-  depth = 0
-): { player: EvoRawCard[]; banker: EvoRawCard[] } | null {
-  if (depth > 6 || !obj || typeof obj !== 'object') return null;
-  if (Array.isArray(obj)) return null;
-
-  const o = obj as Record<string, unknown>;
-
-  // Look for a "cards" container first
-  if (o.cards && typeof o.cards === 'object' && !Array.isArray(o.cards)) {
-    const result = findCardArrays(o.cards, depth + 1);
-    if (result) return result;
-  }
-
-  // Check if this object directly has player + banker arrays
-  const playerKey = Object.keys(o).find(k => k.toLowerCase() === 'player');
-  const bankerKey = Object.keys(o).find(k => k.toLowerCase() === 'banker');
-  if (
-    playerKey && bankerKey &&
-    Array.isArray(o[playerKey]) && Array.isArray(o[bankerKey]) &&
-    (o[playerKey] as unknown[]).length >= 2
-  ) {
-    return {
-      player: o[playerKey] as EvoRawCard[],
-      banker: o[bankerKey] as EvoRawCard[],
-    };
-  }
-
-  // Recurse into nested objects
-  for (const val of Object.values(o)) {
-    if (val && typeof val === 'object' && !Array.isArray(val)) {
-      const result = findCardArrays(val, depth + 1);
-      if (result) return result;
-    }
-    // Also check arrays of objects (e.g. results: [{ cards: {...} }])
-    if (Array.isArray(val)) {
-      for (const item of val) {
-        const result = findCardArrays(item, depth + 1);
-        if (result) return result;
-      }
-    }
-  }
-
-  return null;
-}
-
-/** Converts a raw Evolution card object into our typed Card */
-function normalizeCard(raw: unknown): Card | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const c = raw as EvoRawCard;
-
-  const suitRaw = c.suit ?? c.Suit ?? c.s;
-  const valRaw  = c.value ?? c.Value ?? c.v ?? c.rank;
-
-  const suit = normalizeSuit(suitRaw);
-  const rank = normalizeRank(valRaw);
-
-  if (!suit || !rank) {
-    console.warn('[EVO] Could not normalize card:', JSON.stringify(raw));
-    return null;
-  }
-  return { suit, rank };
-}
-
-function normalizeSuit(raw: unknown): Suit | null {
-  if (typeof raw === 'number') {
-    // Common Evolution encoding: 0=S 1=H 2=D 3=C  (or 1=S 2=H 3=D 4=C)
-    return (['spades', 'hearts', 'diamonds', 'clubs'] as Suit[])[raw] ??
-           (['spades', 'hearts', 'diamonds', 'clubs'] as Suit[])[raw - 1] ??
-           null;
-  }
-  if (typeof raw === 'string') {
-    switch (raw.toUpperCase()[0]) {
-      case 'S': return 'spades';
-      case 'H': return 'hearts';
-      case 'D': return 'diamonds';
-      case 'C': return 'clubs';
-    }
-  }
-  return null;
-}
-
-function normalizeRank(raw: unknown): Rank | null {
-  if (typeof raw === 'number') {
-    if (raw === 1)  return 'A';
-    if (raw >= 2 && raw <= 9) return String(raw) as Rank;
-    if (raw === 10) return '10';
-    if (raw === 11) return 'J';
-    if (raw === 12) return 'Q';
-    if (raw === 13) return 'K';
-  }
-  if (typeof raw === 'string') {
-    const v = raw.toUpperCase();
-    if (v === 'A' || v === 'ACE' || v === '1') return 'A';
-    if (v === 'J' || v === 'JACK' || v === '11') return 'J';
-    if (v === 'Q' || v === 'QUEEN' || v === '12') return 'Q';
-    if (v === 'K' || v === 'KING' || v === '13') return 'K';
-    if (v === 'T' || v === '10') return '10';
-    if (['2','3','4','5','6','7','8','9'].includes(v)) return v as Rank;
-  }
-  return null;
+function normalizeWinner(w: string): 'banker' | 'player' | 'tie' {
+  const l = w.toLowerCase();
+  if (l === 'player') return 'player';
+  if (l === 'banker') return 'banker';
+  return 'tie';
 }

@@ -162,6 +162,7 @@ function loadShoeHistory(args: Record<string, unknown>) {
   }));
 
   shoe = { ...shoe, handsPlayed: syntheticHands };
+  persistShoe();
   console.log(`[EVO] Loaded ${syntheticHands.length} historical hands from shoe state`);
 }
 
@@ -188,6 +189,7 @@ function finalizeHand(gameId: string) {
 
   const hand = buildHand(shoe.handsPlayed.length + 1, playerCards, bankerCards);
   shoe = addHandToShoe(shoe, hand);
+  persistShoe();
 
   const result = analyze(shoe);
   console.log(

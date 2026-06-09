@@ -230,6 +230,20 @@ function finalizeHand(gameId: string) {
   shoe = addHandToShoe(shoe, hand);
   persistShoe();
 
+  appendToLog({
+    ts: Date.now(),
+    shoeId: currentShoeId,
+    gameId,
+    outcome: hand.outcome,
+    pScore: hand.playerScore,
+    bScore: hand.bankerScore,
+    pCards: playerCards.map(c => c.rank + c.suit[0].toUpperCase()).join(' '),
+    bCards: bankerCards.map(c => c.rank + c.suit[0].toUpperCase()).join(' '),
+    nat: !!hand.natural,
+    pp: hand.playerPair,
+    bp: hand.bankerPair,
+  });
+
   const result = analyze(shoe);
   console.log(
     `[EVO] Hand #${shoe.handsPlayed.length}: ${hand.outcome.toUpperCase()}`,

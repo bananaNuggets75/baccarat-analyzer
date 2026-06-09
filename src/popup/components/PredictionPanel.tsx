@@ -1,7 +1,8 @@
 import type { AnalysisResult } from "../../types";
 import styles from "./PredictionPanel.module.css";
 
-interface Props { result: AnalysisResult | null }
+type Phase = "betting" | "dealing" | "resolved" | null;
+interface Props { result: AnalysisResult | null; phase?: Phase }
 
 const LABEL: Record<string, string> = { banker: "BANKER", player: "PLAYER", tie: "TIE" };
 const COLOR: Record<string, string> = { banker: "#63b3ed", player: "#fc8181", tie: "#68d391" };
@@ -20,15 +21,35 @@ const SIGNAL_COLOR: Record<string, string> = {
 function pct(n: number) { return (n * 100).toFixed(1) + "%"; }
 function edge(n: number) { return (n >= 0 ? "+" : "") + n.toFixed(3) + "%"; }
 
-export default function PredictionPanel({ result }: Props) {
+export default function PredictionPanel({ result, phase }: Props) {
   if (!result) return <div className={styles.empty}>Waiting for hand data…</div>;
 
   const { prediction, edge: edgeCalc } = result;
   const rec = prediction.recommended;
   const src = prediction.signalSource;
 
+  const lastHand = result.shoe?.handsPlayed?.at(-1);
+
   return (
     <div className={styles.root}>
+
+      {/* ── Phase banner ── */}
+      {phase === 'betting' && (
+        <div className={styles.bettingBanner}>
+          <span className={styles.bettingDot} />
+          BET NOW — Betting window open
+        </div>
+      )}
+      {phase === 'dealing' && (
+        <div className={styles.dealingBanner}>Dealing cards…</div>
+      )}
+      {phase === 'resolved' && lastHand && (
+        <div className={styles.resolvedBanner}>
+          Last hand: <strong style={{ color: COLOR[lastHand.outcome] }}>
+            {LABEL[lastHand.outcome]}
+          </strong> (P:{lastHand.playerScore} B:{lastHand.bankerScore})
+        </div>
+      )}
 
       {/* ── Recommendation ── */}
       <div className={styles.recommendation} style={{ borderColor: COLOR[rec] }}>

@@ -273,9 +273,48 @@ def main(csv_path: str, output_dir: str = '../public'):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Usage: python train/train.py <csv_path> [output_dir]")
-        print("  output_dir defaults to ../public (relative to train/)")
+        print("Usage: python train/train.py <csv1> [csv2 csv3 ...] [--out <dir>]")
+        print("  Pass multiple CSVs to merge sessions before training.")
+        print("  --out defaults to ../public (relative to train/)")
         sys.exit(1)
-    csv_file = sys.argv[1]
-    out_dir  = sys.argv[2] if len(sys.argv) > 2 else str(Path(__file__).parent / '../public')
-    main(csv_file, out_dir)
+
+    # Parse args: collect CSV paths until --out flag
+    csv_files = []
+    out_dir = str(Path(__file__).parent / '../public')
+    i = 1
+    while i < len(sys.argv):
+        if sys.argv[i] == '--out':
+            out_dir = sys.argv[i + 1]
+            i += 2
+        else:
+            csv_files.append(sys.argv[i])
+            i += 1
+
+    if len(csv_files) == 1:
+        main(csv_files[0], out_dir)
+    else:
+        # Merge multiple CSVs, deduplicate by GameID
+        print(f"Merging {len(csv_files)} CSV files...")
+        frames = []
+        for path in csv_files:
+            try:
+                frames.append(pd.read_csv(path))
+                print(f"  + {path}  ({len(frames[-1])} rows)")
+            except FileNotFoundError:
+                print(f"  ! {path} not found, skipping")
+        if not frames:
+            print("No valid CSV files found.")
+            sys.exit(1)
+        merged = pd.concat(frames, ignore_index=True)
+        if 'GameID' in merged.columns:
+            before = len(merged)
+            merged = merged.drop_duplicates(subset='GameID')
+            dupes = before - len(merged)
+            if dupes:
+                print(f"  Removed {dupes} duplicate hands")
+        print(f"  Total after merge: {len(merged)} rows")
+        # Write merged CSV to a temp file, then train
+        tmp = Path(out_dir).parent / 'train' / '_merged_tmp.csv'
+        merged.to_csv(tmp, index=False)
+        main(str(tmp), out_dir)
+        tmp.unlink(missing_ok=True)

@@ -67,7 +67,7 @@ export interface Roads {
   cockroachPig: boolean[][];
 }
 
-export type SignalSource = "default" | "pattern" | "count";
+export type SignalSource = "default" | "pattern" | "count" | "ml";
 
 export interface Prediction {
   recommended: HandOutcome;
@@ -78,6 +78,7 @@ export interface Prediction {
   patternSignal: HandOutcome | null;
   edgeSignal: HandOutcome;
   signalSource: SignalSource;
+  mlModelActive: boolean;  // true when ML weights are loaded and blended
 }
 
 export interface AnalysisResult {

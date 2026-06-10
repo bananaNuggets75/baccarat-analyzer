@@ -1,10 +1,11 @@
-import type { EdgeCalc, Hand, Prediction, Roads, SignalSource } from "../types";
+import type { EdgeCalc, Prediction, Roads, ShoeState, SignalSource } from "../types";
 import { patternSignal } from "./roads";
+import { predictML } from "./model";
 
 export function predict(
   edge: EdgeCalc,
   roads: Roads,
-  _recentHands: Hand[]
+  shoe: ShoeState,
 ): Prediction {
   const pattern = patternSignal(roads);
 
@@ -13,9 +14,7 @@ export function predict(
   let playerProb = 0.4462;
   let tieProb    = 0.0952;
 
-  // ── Card count adjustment (tiny in baccarat, only meaningful at depth) ──
-  // Only shift probabilities if we've tracked at least 25% of the shoe.
-  // Below that threshold the count is unreliable noise.
+  // ── Card count adjustment (only meaningful once >25% of shoe is tracked) ─
   const countReliable = edge.confidence >= 0.25;
   if (countReliable) {
     const edgeDiff = edge.bankerEdge - edge.playerEdge;
@@ -29,6 +28,19 @@ export function predict(
     }
   }
 
+  // ── ML model blend ───────────────────────────────────────────────────────
+  // Alpha grows with shoe depth so the model earns trust as it sees more data.
+  // Max 0.65 — never let ML fully override the statistical baseline.
+  const ml = predictML(shoe);
+  const mlActive = ml.modelUsed && shoe.handsPlayed.length >= 3;
+
+  if (mlActive) {
+    const alpha = Math.min(0.65, shoe.penetration * 1.4 + 0.15);
+    bankerProb = alpha * ml.bankerProb + (1 - alpha) * bankerProb;
+    playerProb = alpha * ml.playerProb + (1 - alpha) * playerProb;
+    tieProb    = alpha * ml.tieProb    + (1 - alpha) * tieProb;
+  }
+
   // Normalize
   const total = bankerProb + playerProb + tieProb;
   bankerProb /= total;
@@ -36,20 +48,23 @@ export function predict(
   tieProb    /= total;
 
   // ── Determine recommendation and signal source ───────────────────────────
-  // Priority: count (when reliable) > pattern > default (Banker = lowest edge)
+  // Priority: count (when reliable) > ML (when active) > pattern > default
   let recommended: "banker" | "player" | "tie" = "banker";
   let signalSource: SignalSource = "default";
 
   if (countReliable && edge.recommendation === "player") {
-    // Count has observed enough cards and says player has better edge
     recommended = "player";
     signalSource = "count";
+  } else if (mlActive) {
+    // ML-blended probabilities: recommend the highest
+    if (bankerProb >= playerProb && bankerProb >= tieProb) recommended = "banker";
+    else if (playerProb >= bankerProb && playerProb >= tieProb) recommended = "player";
+    else recommended = "tie";
+    signalSource = "ml";
   } else if (pattern !== null) {
-    // Pattern signal from road analysis
     recommended = pattern;
     signalSource = "pattern";
   }
-  // else: default Banker — no signal, just lowest base house edge
 
   return {
     recommended,
@@ -60,5 +75,6 @@ export function predict(
     patternSignal: pattern,
     edgeSignal: edge.recommendation,
     signalSource,
+    mlModelActive: mlActive,
   };
 }

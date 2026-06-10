@@ -6,7 +6,7 @@ import { predict } from "./prediction";
 export function analyze(shoe: ShoeState): AnalysisResult {
   const edge = calculateEdge(shoe);
   const roads = buildRoads(shoe.handsPlayed);
-  const prediction = predict(edge, roads, shoe.handsPlayed);
+  const prediction = predict(edge, roads, shoe);
   return { roads, edge, prediction, shoe };
 }
 

@@ -20,7 +20,7 @@
  *  [24] natural_rate
  */
 
-import type { Card, Hand, ShoeState } from "../types";
+import type { Card, ShoeState } from "../types";
 
 export interface ModelWeights {
   version: number;

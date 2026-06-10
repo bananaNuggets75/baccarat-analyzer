@@ -218,7 +218,6 @@ def main(csv_path: str, output_dir: str = '../public'):
 
     print("\nTraining logistic regression...")
     model = LogisticRegression(
-        multi_class='multinomial',
         solver='lbfgs',
         max_iter=2000,
         C=0.5,          # mild regularisation — baccarat has genuine noise
@@ -259,7 +258,7 @@ def main(csv_path: str, output_dir: str = '../public'):
             "n_training_samples": int(len(X_train)),
             "n_test_samples": int(len(X_test)),
             "n_shoes": int(len(unique_shoes)),
-            "trained_at": datetime.datetime.utcnow().isoformat() + "Z",
+            "trained_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         },
     }
 

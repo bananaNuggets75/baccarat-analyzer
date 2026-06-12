@@ -1,7 +1,7 @@
 import { analyze, addHandToShoe, newShoe } from "../analysis";
 import { buildHand } from "../analysis/scoring";
 import { setModelWeights } from "../analysis/model";
-import type { Card, ExtMessage, Hand, NaturalType, Rank, ShoeState, Suit } from "../types";
+import type { Card, ExtMessage, Hand, NaturalType, PredRecord, Rank, ShoeState, Suit } from "../types";
 
 // ── Evolution Gaming wire types ──────────────────────────────────────────────
 interface EvoGameData {
@@ -53,11 +53,25 @@ function persistShoe() {
   chrome.storage.local.set({ 'bac:shoe': shoe });
 }
 
+// chrome.storage.local has a ~10MB quota — cap logs so they never silently fail
+const MAX_LOG_ENTRIES = 20000;
+const MAX_PRED_ENTRIES = 2000;
+
 function appendToLog(entry: LogEntry) {
   chrome.storage.local.get('bac:log', (data) => {
-    const log: LogEntry[] = (data['bac:log'] as LogEntry[]) ?? [];
+    let log: LogEntry[] = (data['bac:log'] as LogEntry[]) ?? [];
     log.push(entry);
+    if (log.length > MAX_LOG_ENTRIES) log = log.slice(-MAX_LOG_ENTRIES);
     chrome.storage.local.set({ 'bac:log': log });
+  });
+}
+
+function appendToPredLog(entry: PredRecord) {
+  chrome.storage.local.get('bac:predlog', (data) => {
+    let log: PredRecord[] = (data['bac:predlog'] as PredRecord[]) ?? [];
+    log.push(entry);
+    if (log.length > MAX_PRED_ENTRIES) log = log.slice(-MAX_PRED_ENTRIES);
+    chrome.storage.local.set({ 'bac:predlog': log });
   });
 }
 
@@ -250,9 +264,23 @@ function finalizeHand(gameId: string) {
   seenGameIds.add(gameId);
   pendingGameData.delete(gameId);
 
+  // Capture what we predicted BEFORE this hand, so we can score the model live
+  const pre = analyze(shoe).prediction;
+
   const hand = buildHand(shoe.handsPlayed.length + 1, playerCards, bankerCards);
   shoe = addHandToShoe(shoe, hand);
   persistShoe();
+
+  appendToPredLog({
+    ts: Date.now(),
+    shoeId: currentShoeId,
+    predicted: pre.recommended,
+    actual: hand.outcome,
+    hit: pre.recommended === hand.outcome,
+    probSpread: pre.probSpread,
+    signalSource: pre.signalSource,
+    betSignal: pre.betSignal,
+  });
 
   appendToLog({
     ts: Date.now(),

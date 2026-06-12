@@ -66,6 +66,13 @@ export function predict(
     signalSource = "pattern";
   }
 
+  // ── Confidence gate ──────────────────────────────────────────────────────
+  // Only call it a real bet signal when banker/player separate by ≥3pp.
+  // Below that the read is statistically indistinguishable from the baseline
+  // (banker 45.9% vs player 44.6% ≈ 1.2pp), so betting on it is just gambling.
+  const probSpread = Math.abs(bankerProb - playerProb);
+  const betSignal = probSpread >= 0.03;
+
   return {
     recommended,
     bankerProb,
@@ -76,5 +83,7 @@ export function predict(
     edgeSignal: edge.recommendation,
     signalSource,
     mlModelActive: mlActive,
+    probSpread,
+    betSignal,
   };
 }

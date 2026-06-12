@@ -82,7 +82,6 @@ function buildDerivedRoad(bigRoad: (RoadCell | null)[][], offset: number): Deriv
     if (!result[col - offset]) result[col - offset] = [];
 
     for (let row = 0; row < len; row++) {
-      const refRow = colLen(col - offset + 1 - 1); // derived comparison
       const repetitive = row === 0
         ? colLen(col - offset + 1) >= colLen(col - offset - 1 + 1)
         : row < refLen;

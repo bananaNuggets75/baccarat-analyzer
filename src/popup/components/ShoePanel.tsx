@@ -122,6 +122,14 @@ export default function ShoePanel({ result }: Props) {
         })}
       </div>
 
+      {logStats && (
+        <div className={styles.trainingStats}>
+          Training data collected: <strong>{logStats.hands}</strong> hands
+          {" across "}<strong>{logStats.shoes}</strong> shoes
+          {" "}(avg {logStats.avgPerShoe.toFixed(1)}/shoe)
+        </div>
+      )}
+
       <div className={styles.history}>
         <div className={styles.historyHeader}>
           <span className={styles.title}>Last 10 Hands</span>

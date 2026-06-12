@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Card, Hand, HandOutcome, Rank, Suit } from "../../types";
+import type { Card, Hand, Rank, Suit } from "../../types";
 import { buildHand } from "../../analysis/scoring";
 import styles from "./HandEntry.module.css";
 

@@ -32,6 +32,12 @@
   cursor: pointer;
 }
 .exportBtn:hover { background: #4a5568; color: #e2e8f0; }
+
+.trainingStats {
+  background: #1a1f2e; border-radius: 8px; padding: 8px 12px;
+  font-size: 11px; color: #718096;
+}
+.trainingStats strong { color: #a0aec0; }
 .handRow {
   display: flex; align-items: center; gap: 8px;
   background: #1a1f2e; border-radius: 8px; padding: 8px 10px;

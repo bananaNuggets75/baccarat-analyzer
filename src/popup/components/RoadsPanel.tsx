@@ -9,7 +9,6 @@ const BG: Record<HandOutcome, string> = {
 
 function BeadGrid({ grid }: { grid: RoadCell[][] }) {
   if (!grid.length) return <div className={styles.empty}>No data yet.</div>;
-  const maxCols = grid.length;
   return (
     <div className={styles.beadGrid}>
       {grid.map((col, ci) =>

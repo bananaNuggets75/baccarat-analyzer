@@ -1,7 +1,10 @@
+import { useEffect, useState } from "react";
 import type { AnalysisResult } from "../../types";
 import styles from "./ShoePanel.module.css";
 
 interface Props { result: AnalysisResult | null }
+
+interface LogStats { hands: number; shoes: number; avgPerShoe: number }
 
 const RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"] as const;
 
@@ -56,6 +59,20 @@ function exportCSV(result: AnalysisResult) {
 }
 
 export default function ShoePanel({ result }: Props) {
+  const [logStats, setLogStats] = useState<LogStats | null>(null);
+  const handCount = result?.shoe.handsPlayed.length ?? 0;
+
+  useEffect(() => {
+    chrome.runtime.sendMessage({ type: 'GET_LOG' }, (res) => {
+      if (chrome.runtime.lastError) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const log: any[] = res?.ok ? res.log : [];
+      if (!log.length) { setLogStats({ hands: 0, shoes: 0, avgPerShoe: 0 }); return; }
+      const shoes = new Set(log.map((e) => e.shoeId)).size;
+      setLogStats({ hands: log.length, shoes, avgPerShoe: log.length / Math.max(shoes, 1) });
+    });
+  }, [handCount]);
+
   if (!result) return <div className={styles.empty}>Enter hands to see shoe data.</div>;
   const { shoe } = result;
   const total = shoe.totalDecks * 52;
@@ -104,6 +121,14 @@ export default function ShoePanel({ result }: Props) {
           );
         })}
       </div>
+
+      {logStats && (
+        <div className={styles.trainingStats}>
+          Training data collected: <strong>{logStats.hands}</strong> hands
+          {" across "}<strong>{logStats.shoes}</strong> shoes
+          {" "}(avg {logStats.avgPerShoe.toFixed(1)}/shoe)
+        </div>
+      )}
 
       <div className={styles.history}>
         <div className={styles.historyHeader}>

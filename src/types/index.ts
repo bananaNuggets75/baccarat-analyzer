@@ -79,6 +79,20 @@ export interface Prediction {
   edgeSignal: HandOutcome;
   signalSource: SignalSource;
   mlModelActive: boolean;  // true when ML weights are loaded and blended
+  probSpread: number;      // |bankerProb - playerProb| — how decisive the read is
+  betSignal: boolean;      // false = spread below threshold, no real edge, skip
+}
+
+/** One prediction-vs-outcome record, logged when a hand resolves */
+export interface PredRecord {
+  ts: number;
+  shoeId: string;
+  predicted: HandOutcome;
+  actual: HandOutcome;
+  hit: boolean;
+  probSpread: number;
+  signalSource: SignalSource;
+  betSignal: boolean;
 }
 
 export interface AnalysisResult {
@@ -89,7 +103,7 @@ export interface AnalysisResult {
 }
 
 export interface ExtMessage {
-  type: "ADD_HAND" | "RESET_SHOE" | "GET_STATE" | "SCREENSHOT_HAND" | "WS_GAME_EVENT" | "GET_LOG";
+  type: "ADD_HAND" | "RESET_SHOE" | "GET_STATE" | "SCREENSHOT_HAND" | "WS_GAME_EVENT" | "GET_LOG" | "GET_PRED_LOG";
   payload?: unknown;
 }
 

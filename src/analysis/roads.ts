@@ -63,32 +63,61 @@ function buildBigRoad(hands: Hand[]): (RoadCell | null)[][] {
 type DerivedGrid = boolean[][];
 
 /**
- * Derived roads compare current column length vs prior column lengths.
+ * Derived roads — standard casino algorithm.
  * offset 1 = Big Eye Boy, 2 = Small Road, 3 = Cockroach Pig.
- * true = repetitive (red), false = chaotic (blue).
+ * true = red (predictable / repeating), false = blue (chaotic).
+ *
+ * For each Big Road cell at (col c, row r), in chronological order:
+ *  - r == 0 (a new column starts): red iff the two reference columns
+ *    (c-1) and (c-1-offset) have equal length — the pattern "repeated".
+ *  - r >= 1 (column extends downward): look at column (c-offset) at the
+ *    same depth: red if it also has a cell at row r (matched the move),
+ *    blue if it ended exactly at r-1 (failed to match), red if it had
+ *    already ended before r-1 (both "fell off" the same way earlier).
+ *
+ * Output is grouped into display columns: a new column starts whenever
+ * the color changes, matching how casinos render these roads.
  */
 function buildDerivedRoad(bigRoad: (RoadCell | null)[][], offset: number): DerivedGrid {
-  const result: DerivedGrid = [];
-
   function colLen(c: number): number {
     const col = bigRoad[c];
     if (!col) return 0;
     return col.filter(Boolean).length;
   }
 
-  for (let col = offset; col < bigRoad.length; col++) {
-    const len = colLen(col);
-    const refLen = colLen(col - offset);
-    if (!result[col - offset]) result[col - offset] = [];
+  function hasCell(c: number, r: number): boolean {
+    return r >= 0 && r < colLen(c);
+  }
 
-    for (let row = 0; row < len; row++) {
-      const refRow = colLen(col - offset + 1 - 1); // derived comparison
-      const repetitive = row === 0
-        ? colLen(col - offset + 1) >= colLen(col - offset - 1 + 1)
-        : row < refLen;
-      result[col - offset].push(repetitive);
+  // Walk Big Road cells in chronological order (column-major) and emit colors
+  const colors: boolean[] = [];
+  for (let c = 0; c < bigRoad.length; c++) {
+    const len = colLen(c);
+    for (let r = 0; r < len; r++) {
+      if (r === 0) {
+        if (c < offset + 1) continue; // not enough history yet
+        colors.push(colLen(c - 1) === colLen(c - 1 - offset));
+      } else {
+        if (c < offset) continue;
+        if (hasCell(c - offset, r)) colors.push(true);
+        else if (hasCell(c - offset, r - 1)) colors.push(false);
+        else colors.push(true);
+      }
     }
   }
+
+  // Group into display columns: new column on color change, 6 rows max
+  const result: DerivedGrid = [];
+  let current: boolean[] = [];
+  for (const color of colors) {
+    if (current.length === 0 || (current[0] === color && current.length < 6)) {
+      current.push(color);
+    } else {
+      result.push(current);
+      current = [color];
+    }
+  }
+  if (current.length > 0) result.push(current);
 
   return result;
 }

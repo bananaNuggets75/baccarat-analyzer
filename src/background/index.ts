@@ -133,6 +133,12 @@ chrome.runtime.onMessage.addListener((msg: ExtMessage, _sender, sendResponse) =>
       });
       break;
     }
+    case "GET_PRED_LOG": {
+      chrome.storage.local.get('bac:predlog', (data) => {
+        sendResponse({ ok: true, log: data['bac:predlog'] ?? [] });
+      });
+      break;
+    }
     default:
       sendResponse({ ok: false, error: "Unknown message type" });
   }
